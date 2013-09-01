@@ -11,16 +11,20 @@ Conversion from Emacs Org-Mode to 'Pandoc' document.
 
 module Text.Pandoc.Readers.Org where
 
-import Control.Applicative ( (*>), (<|>), many )
+import Control.Applicative ( (*>), (<|>) )
+
 import Data.Default ( def )
 import Data.Monoid ( mconcat )
+import Data.List ( intersperse )
 
 import Text.Pandoc.Builder ( Blocks, Inlines )
 import qualified Text.Pandoc.Builder as Builder
 import Text.Pandoc.Definition ( Pandoc )
 import Text.Pandoc.Options ( ReaderOptions )
 import Text.Pandoc.Parsing  ( Parser, ParserState(..),
-                              readWith, anyLine, char )
+                              readWith, anyLine, char, blankline, blanklines,
+                              notFollowedBy, eof, manyTill, many1, optional,
+                              choice, skipSpaces )
 
 -- | Convert Emacs Org-Mode to 'Pandoc' document.
 readOrg :: ReaderOptions        -- ^ Reader options.
@@ -31,8 +35,13 @@ readOrg opts = readWith parseOrg def{ stateOptions = opts }
 type OrgParser = Parser String ParserState
 
 parseOrg :: OrgParser Pandoc
-parseOrg = doc `fmap` many header
+parseOrg = doc `fmap` manyTill block eof
   where doc = Builder.doc . mconcat
+
+block :: OrgParser Blocks
+block = choice [ header
+               , para
+               ]
 
 header :: OrgParser Blocks
 header = char '*' *> go 1
@@ -41,3 +50,11 @@ header = char '*' *> go 1
 
 line :: OrgParser Inlines
 line = Builder.text `fmap` anyLine
+
+nonBlankLines :: OrgParser Inlines
+nonBlankLines = do
+  ls <- many1 (notFollowedBy blankline *> skipSpaces *> line)
+  return $ mconcat (intersperse Builder.space ls)
+
+para :: OrgParser Blocks
+para = Builder.para `fmap` (optional blanklines >> nonBlankLines)
