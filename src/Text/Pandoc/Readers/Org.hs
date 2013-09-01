@@ -11,7 +11,7 @@ Conversion from Emacs Org-Mode to 'Pandoc' document.
 
 module Text.Pandoc.Readers.Org where
 
-import Control.Applicative ( (*>), (<|>) )
+import Control.Applicative ( (<*), (*>) )
 
 import Data.Default ( def )
 import Data.Monoid ( mconcat )
@@ -24,7 +24,7 @@ import Text.Pandoc.Options ( ReaderOptions )
 import Text.Pandoc.Parsing  ( Parser, ParserState(..),
                               readWith, anyLine, char, blankline, blanklines,
                               notFollowedBy, eof, manyTill, many1, optional,
-                              choice, skipSpaces )
+                              choice, skipSpaces, try )
 
 -- | Convert Emacs Org-Mode to 'Pandoc' document.
 readOrg :: ReaderOptions        -- ^ Reader options.
@@ -44,9 +44,10 @@ block = choice [ header
                ]
 
 header :: OrgParser Blocks
-header = char '*' *> go 1
-  where go level = (char '*' *> go (level + 1)) <|>
-                   Builder.header level `fmap` line
+header = do
+  level <- length `fmap` try (many1 (char '*') <* char ' ')
+  skipSpaces
+  Builder.header level `fmap` line
 
 line :: OrgParser Inlines
 line = Builder.text `fmap` anyLine
