@@ -11,7 +11,7 @@ Conversion from Emacs Org-Mode to 'Pandoc' document.
 
 module Text.Pandoc.Readers.Org where
 
-import Control.Applicative ( (<*), (*>) )
+import Control.Applicative ( (<*), (*>), (<|>), pure )
 
 import Data.Default ( def )
 import Data.Monoid ( mconcat )
@@ -58,4 +58,12 @@ nonBlankLines = do
   return $ mconcat (intersperse Builder.space ls)
 
 para :: OrgParser Blocks
-para = Builder.para `fmap` nonBlankLines
+para = do
+  ls <- intersperse Builder.space `fmap` many1 paraLine
+  return $ Builder.para (mconcat ls)
+
+  where paraLine = notFollowedBy paraEnd *> skipSpaces *> line
+        paraEnd = skip blankline <|> skip header
+
+skip :: OrgParser a -> OrgParser ()
+skip p = p *> pure ()
