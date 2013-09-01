@@ -39,9 +39,9 @@ parseOrg = doc `fmap` manyTill block eof
   where doc = Builder.doc . mconcat
 
 block :: OrgParser Blocks
-block = choice [ header
-               , para
-               ]
+block = optional blanklines *> choice [ header
+                                      , para
+                                      ]
 
 header :: OrgParser Blocks
 header = do
@@ -58,4 +58,4 @@ nonBlankLines = do
   return $ mconcat (intersperse Builder.space ls)
 
 para :: OrgParser Blocks
-para = Builder.para `fmap` (optional blanklines >> nonBlankLines)
+para = Builder.para `fmap` nonBlankLines
