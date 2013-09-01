@@ -73,6 +73,7 @@ module Text.Pandoc
                , readHaddock
                , readNative
                , readJSON
+               , readOrg
                -- * Writers: converting /from/ Pandoc format
                , Writer (..)
                , writeNative
@@ -122,6 +123,7 @@ import Text.Pandoc.Readers.HTML
 import Text.Pandoc.Readers.Textile
 import Text.Pandoc.Readers.Native
 import Text.Pandoc.Readers.Haddock
+import Text.Pandoc.Readers.Org
 import Text.Pandoc.Writers.Native
 import Text.Pandoc.Writers.Markdown
 import Text.Pandoc.Writers.RST
@@ -205,6 +207,7 @@ readers = [ ("native"       , \_ s -> return $ readNative s)
            ,("html"         , \o s -> return $ readHtml o s)
            ,("latex"        , \o s -> return $ readLaTeX o s)
            ,("haddock"      , \o s -> return $ readHaddock o s)
+           ,("org"          , \o s -> return $ readOrg o s)
            ]
 
 data Writer = PureStringWriter   (WriterOptions -> Pandoc -> String)
