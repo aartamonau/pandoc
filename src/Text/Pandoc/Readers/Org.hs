@@ -11,20 +11,23 @@ Conversion from Emacs Org-Mode to 'Pandoc' document.
 
 module Text.Pandoc.Readers.Org where
 
-import Control.Applicative ( (<*), (*>), (<|>), pure )
+import Control.Applicative ( (<$>), (<*), (*>), (<|>), pure )
 
+import Data.Char ( toLower )
 import Data.Default ( def )
-import Data.Monoid ( mconcat )
 import Data.List ( intersperse )
+import Data.Monoid ( mconcat, mempty )
 
 import Text.Pandoc.Builder ( Blocks, Inlines )
 import qualified Text.Pandoc.Builder as Builder
-import Text.Pandoc.Definition ( Pandoc )
+import Text.Pandoc.Definition ( Pandoc(..) )
 import Text.Pandoc.Options ( ReaderOptions )
 import Text.Pandoc.Parsing  ( Parser, ParserState(..),
+                              getState, updateState, stateMeta,
                               readWith, anyLine, char, blankline, blanklines,
-                              notFollowedBy, eof, manyTill, many1, optional,
-                              choice, skipSpaces, try )
+                              notFollowedBy, eof, many, manyTill, many1,
+                              optional, choice, skipSpaces, try, string,
+                              newline, anyChar )
 
 -- | Convert Emacs Org-Mode to 'Pandoc' document.
 readOrg :: ReaderOptions        -- ^ Reader options.
@@ -35,8 +38,13 @@ readOrg opts = readWith parseOrg def{ stateOptions = opts }
 type OrgParser = Parser String ParserState
 
 parseOrg :: OrgParser Pandoc
-parseOrg = doc `fmap` manyTill block eof
-  where doc = Builder.doc . mconcat
+parseOrg = do
+  bs <- mconcat <$> manyTill block eof
+  meta <- stateMeta <$> getState
+
+  let Pandoc _ bs' = Builder.doc bs
+
+  return $ Pandoc meta bs'
 
 block :: OrgParser Blocks
 block = optional blanklines *> choice [ header
@@ -50,7 +58,25 @@ header = do
   Builder.header level `fmap` line
 
 line :: OrgParser Inlines
-line = Builder.text `fmap` anyLine
+line = many metaLine *> textLine
+
+textLine :: OrgParser Inlines
+textLine = Builder.text `fmap` anyLine
+
+metaLine :: OrgParser ()
+metaLine = do
+  string "#+"
+  field <- map toLower <$> manyTill anyChar (newline <|> char ':')
+
+  optional $ char ':'
+
+  skipSpaces
+  rest <- anyLine
+
+  let value | null rest = mempty
+            | otherwise = Builder.text rest
+
+  updateState $ Builder.setMeta field value
 
 nonBlankLines :: OrgParser Inlines
 nonBlankLines = do
