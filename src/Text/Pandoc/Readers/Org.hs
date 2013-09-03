@@ -62,7 +62,7 @@ header = do
 textLine :: OrgParser Inlines
 textLine = Builder.text `fmap` anyLine
 
-metaLine :: OrgParser ()
+metaLine :: OrgParser Inlines
 metaLine = do
   try $ string "#+"
   field <- map toLower <$> manyTill anyChar (lookAhead $ newline <|> char ':')
@@ -76,6 +76,7 @@ metaLine = do
             | otherwise = Builder.text rest
 
   updateState $ Builder.setMeta field value
+  return mempty
 
 para :: OrgParser Blocks
 para = do
@@ -83,7 +84,7 @@ para = do
   return $ Builder.para (mconcat ls)
 
   where paraLine = notFollowedBy paraEnd *> line
-          where line = (metaLine *> pure mempty) <|> (skipSpaces *> textLine)
+          where line = metaLine <|> (skipSpaces *> textLine)
         paraEnd = skip blankline <|> skip header
 
 skip :: OrgParser a -> OrgParser ()
