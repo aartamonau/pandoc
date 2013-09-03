@@ -47,9 +47,10 @@ parseOrg = do
   return $ Pandoc meta bs'
 
 block :: OrgParser Blocks
-block = optional blanklines *> choice [ header
-                                      , para
-                                      ]
+block = choice [ header
+               , para
+               , blanklines *> pure mempty
+               ]
 
 header :: OrgParser Blocks
 header = do
