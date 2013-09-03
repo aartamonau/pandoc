@@ -33,7 +33,7 @@ import Text.Pandoc.Parsing  ( Parser, ParserState(..),
 readOrg :: ReaderOptions        -- ^ Reader options.
         -> String               -- ^ String to parse.
         -> Pandoc
-readOrg opts = readWith parseOrg def{ stateOptions = opts }
+readOrg opts s = readWith parseOrg def{ stateOptions = opts } (s ++ "\n")
 
 type OrgParser = Parser String ParserState
 
