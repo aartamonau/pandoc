@@ -25,9 +25,9 @@ import Text.Pandoc.Options ( ReaderOptions )
 import Text.Pandoc.Parsing  ( Parser, ParserState(..),
                               getState, updateState, stateMeta,
                               readWith, anyLine, char, blankline, blanklines,
-                              notFollowedBy, eof, many, manyTill, many1,
+                              notFollowedBy, eof, manyTill, many1,
                               optional, choice, skipSpaces, try, string,
-                              newline, anyChar )
+                              newline, anyChar, lookAhead )
 
 -- | Convert Emacs Org-Mode to 'Pandoc' document.
 readOrg :: ReaderOptions        -- ^ Reader options.
@@ -48,6 +48,7 @@ parseOrg = do
 
 block :: OrgParser Blocks
 block = choice [ header
+               , metaLine *> pure mempty -- should go before para
                , para
                , blanklines *> pure mempty
                ]
@@ -56,18 +57,15 @@ header :: OrgParser Blocks
 header = do
   level <- length `fmap` try (many1 (char '*') <* char ' ')
   skipSpaces
-  Builder.header level `fmap` line
-
-line :: OrgParser Inlines
-line = many metaLine *> textLine
+  Builder.header level `fmap` textLine
 
 textLine :: OrgParser Inlines
 textLine = Builder.text `fmap` anyLine
 
 metaLine :: OrgParser ()
 metaLine = do
-  string "#+"
-  field <- map toLower <$> manyTill anyChar (newline <|> char ':')
+  try $ string "#+"
+  field <- map toLower <$> manyTill anyChar (lookAhead $ newline <|> char ':')
 
   optional $ char ':'
 
@@ -84,7 +82,8 @@ para = do
   ls <- intersperse Builder.space `fmap` many1 paraLine
   return $ Builder.para (mconcat ls)
 
-  where paraLine = notFollowedBy paraEnd *> skipSpaces *> line
+  where paraLine = notFollowedBy paraEnd *> line
+          where line = (metaLine *> pure mempty) <|> (skipSpaces *> textLine)
         paraEnd = skip blankline <|> skip header
 
 skip :: OrgParser a -> OrgParser ()
