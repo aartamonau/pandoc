@@ -79,11 +79,6 @@ metaLine = do
 
   updateState $ Builder.setMeta field value
 
-nonBlankLines :: OrgParser Inlines
-nonBlankLines = do
-  ls <- many1 (notFollowedBy blankline *> skipSpaces *> line)
-  return $ mconcat (intersperse Builder.space ls)
-
 para :: OrgParser Blocks
 para = do
   ls <- intersperse Builder.space `fmap` many1 paraLine
