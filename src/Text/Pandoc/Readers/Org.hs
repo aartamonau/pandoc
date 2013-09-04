@@ -56,12 +56,12 @@ block = choice [ header
 
 header :: OrgParser Blocks
 header = do
-  level <- length `fmap` try (many1 (char '*') <* char ' ')
+  level <- length <$> try (many1 (char '*') <* char ' ')
   skipSpaces
-  Builder.header level `fmap` textLine
+  Builder.header level <$> textLine
 
 textLine :: OrgParser Inlines
-textLine = Builder.text `fmap` manyTill anyChar end
+textLine = Builder.text <$> manyTill anyChar end
   where end = skip commentLine <|> skip newline
 
 metaLine :: OrgParser Inlines
