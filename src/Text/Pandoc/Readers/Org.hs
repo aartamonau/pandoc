@@ -27,7 +27,8 @@ import Text.Pandoc.Parsing  ( Parser, ParserState(..),
                               readWith, anyLine, char, blankline, blanklines,
                               notFollowedBy, eof, manyTill, many1,
                               optional, choice, skipSpaces, try, string,
-                              newline, anyChar, lookAhead )
+                              newline, anyChar, lookAhead,
+                              nonspaceChar, spaceChar )
 
 -- | Convert Emacs Org-Mode to 'Pandoc' document.
 readOrg :: ReaderOptions        -- ^ Reader options.
@@ -60,8 +61,23 @@ header = do
   skipSpaces
   Builder.header level <$> textLine
 
+inline :: OrgParser Inlines
+inline = choice [ whitespace
+                , word
+                ]
+
+whitespace :: OrgParser Inlines
+whitespace = do
+  spaceChar *> skipSpaces
+
+  -- don't return space in the end of lines
+  (lookAhead newline *> pure mempty) <|> pure Builder.space
+
+word :: OrgParser Inlines
+word = Builder.str <$> many1 nonspaceChar
+
 textLine :: OrgParser Inlines
-textLine = Builder.text <$> manyTill anyChar end
+textLine = mconcat <$> manyTill inline end
   where end = skip commentLine <|> skip newline
 
 metaLine :: OrgParser Inlines
