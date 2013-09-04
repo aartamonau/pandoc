@@ -49,6 +49,7 @@ parseOrg = do
 block :: OrgParser Blocks
 block = choice [ header
                , metaLine *> pure mempty -- should go before para
+               , commentLine *> pure mempty -- should go before para
                , para
                , blanklines *> pure mempty
                ]
@@ -60,7 +61,8 @@ header = do
   Builder.header level `fmap` textLine
 
 textLine :: OrgParser Inlines
-textLine = Builder.text `fmap` anyLine
+textLine = Builder.text `fmap` manyTill anyChar end
+  where end = skip commentLine <|> skip newline
 
 metaLine :: OrgParser Inlines
 metaLine = do
@@ -77,6 +79,9 @@ metaLine = do
 
   updateState $ Builder.setMeta field value
   return mempty
+
+commentLine :: OrgParser Inlines
+commentLine = try (skipSpaces *> string "# ") *> anyLine *> pure mempty
 
 para :: OrgParser Blocks
 para = do
