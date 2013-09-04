@@ -80,7 +80,7 @@ metaLine = do
 
 para :: OrgParser Blocks
 para = do
-  ls <- intersperse Builder.space `fmap` many1 paraLine
+  ls <- intersperse Builder.space <$> filter (/= mempty) <$> many1 paraLine
   return $ Builder.para (mconcat ls)
 
   where paraLine = notFollowedBy paraEnd *> line
